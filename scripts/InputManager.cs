@@ -1,4 +1,6 @@
+using System;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 public class InputManager : MonoBehaviour
 {
@@ -10,6 +12,23 @@ public class InputManager : MonoBehaviour
 
     [SerializeField]
     private LayerMask PlacementLayerMask;
+
+
+    public event Action OnClicked, OnExited;
+    private void Update()
+    {
+        if (Input.GetMouseButtonDown(0))
+        {
+            OnClicked?.Invoke();
+        }
+        if (Input.GetMouseButtonDown(1))
+        {
+            OnExited?.Invoke();
+        }
+    }
+
+    public bool IsPointerOverUI()
+        =>EventSystem.current.IsPointerOverGameObject();
     public Vector3 getSelectedMapPostion()
     {
         Vector3 mausePos = Input.mousePosition;

@@ -51,7 +51,7 @@ public class CameraFollow : MonoBehaviour
         float scroll = Input.GetAxis("Mouse ScrollWheel");
         transform.position += transform.forward * scroll * zoomSpeed;
 
-       ClampZoom();
+        ClampZoom();
     }
 
     void ClampZoom()
