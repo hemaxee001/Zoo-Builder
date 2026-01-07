@@ -1,11 +1,12 @@
 using System;
 using UnityEngine;
+using UnityEngine.Rendering.UI;
 
 public class PlaceMentSystem : MonoBehaviour
 {
-   
-    [SerializeField] // 1
-    private GameObject mouseIndicator, cellIndicator;
+
+    //[SerializeField] // 1
+    //private GameObject mouseIndicator, cellIndicator;
 
     [SerializeField] // 1
     private InputManager inputManager;
@@ -16,76 +17,131 @@ public class PlaceMentSystem : MonoBehaviour
     [SerializeField]
     private ObjectsDatabaseOS objectsDatabase;
 
-    private int selectedObjectId = -1;
     [SerializeField]
     private GameObject gridVisualization;
 
+    private GridData data;
+
+    [SerializeField]
+    private previewSystem preview;
+
+    private Vector3Int lastDeletedPosition = Vector3Int.zero;
+
+    [SerializeField]
+    private ObjectPlacer objectPlacer;
+
+    IBuildingState buildingState;
+
+    public GameObject storePanel;
+    public GameObject ObjectControlPanel;
+
+    [SerializeField]
+    private LayerMask unlockLayer;
+
+    [SerializeField]
+    private GridManager GridManager;
+
+
     private void Start()
     {
+        setGrid();
         StopPlacement();
-        
+        data = new();
     }
-    public void StartPlacement(int ID)
-    {
+   
 
-        selectedObjectId = objectsDatabase.objectDatas.FindIndex(data => data.Id == ID);
-        if (selectedObjectId < 0)
+    public void showStorePanel()
+    {
+        if (storePanel.activeInHierarchy)
         {
-            Debug.LogError("Object with ID " + ID + " not found in database.");
+            storePanel.SetActive(false);
             return;
         }
+        storePanel.SetActive(true);
+    }
+    
+
+    public void StartPlacement(int ID)
+    {
+        storePanel.SetActive(false);
+        ObjectControlPanel.SetActive(true);
+        StopPlacement();
         gridVisualization.SetActive(true);
-        cellIndicator.SetActive(true);
+        buildingState = new PlacementState(ID, Grid, preview, objectsDatabase, data, objectPlacer);
+        inputManager.OnClicked += PlaceStructure;
+        inputManager.OnExited += StopPlacement;
+        inputManager.OnRotate += RotatePreview;
+
+        Vector3 centerPos = GridManager.GetCenterWorldPosition();
+        Vector3Int centerGridPos = Grid.WorldToCell(centerPos);
+        buildingState.UpdateState(centerGridPos);
+    }
+    private void RotatePreview()
+    {
+        preview.RotateObject();
+    }
+
+    public void StartRemoving()
+    {
+        StopPlacement();
+        gridVisualization.SetActive(true);
+        buildingState = new RemovingState(Grid, preview, data, objectPlacer);
         inputManager.OnClicked += PlaceStructure;
         inputManager.OnExited += StopPlacement;
     }
 
     private void PlaceStructure()
     {
-      if(inputManager.IsPointerOverUI())
-        {
-            return;
-        }
-        Vector3 selectedPos = inputManager.getSelectedMapPostion(); // 1
-        Vector3Int cellPos = Grid.WorldToCell(selectedPos); // 2
-        GameObject prefab = Instantiate(objectsDatabase.objectDatas[selectedObjectId].Prefab);
-        prefab.transform.position = Grid.CellToWorld(cellPos);
+        print("-----------PlaceStructure----------");
+        //if (inputManager.IsPointerOverUI())
+        //{
+        //    return;
+        //}
+        Vector3 mousePosition = inputManager.getSelectedMapPostion();
+        Vector3Int gridPosition = Grid.WorldToCell(mousePosition);
+        buildingState.OnAction(gridPosition);
     }
 
     private void StopPlacement()
     {
-        selectedObjectId = -1;
+        if (buildingState == null)
+        {
+            return;
+        }
+        ObjectControlPanel.SetActive(false);
         gridVisualization.SetActive(false);
-        cellIndicator.SetActive(false);
+
+        buildingState.EndState();
+
         inputManager.OnClicked -= PlaceStructure;
         inputManager.OnExited -= StopPlacement;
-       
-
+        lastDeletedPosition = Vector3Int.zero;
+        buildingState = null;
     }
 
     private void Update()
     {
-        Vector3 selectedPos = inputManager.getSelectedMapPostion(); // 1
-        Vector3Int cellPos = Grid.WorldToCell(selectedPos); // 2
-        mouseIndicator.transform.position = selectedPos;// 1
-        cellIndicator.transform.position = Grid.CellToWorld(cellPos);// 2
-        //Vector3 selectedPos = inputManager.getSelectedMapPostion();
-        //Vector3Int cellPos = Grid.WorldToCell(selectedPos);
+        if (buildingState == null)
+        {
+            return;
+        }
 
-        //mouseIndicator.transform.position = selectedPos;
+        Vector3 mousePosition = inputManager.getSelectedMapPostion();
+        Vector3Int gridPosition = Grid.WorldToCell(mousePosition);
 
-        //Vector3 cellWorldPos = Grid.CellToWorld(cellPos);
-        //Vector3 cellCenter = cellWorldPos + new Vector3(
-        //    Grid.cellSize.x / 2f,
-        //    0,
-        //    Grid.cellSize.y / 2f
-        //);
+        if (lastDeletedPosition != gridPosition)
+        {
+            buildingState.UpdateState(gridPosition);
+            lastDeletedPosition = gridPosition;
+        }
+    }
 
-        //cellIndicator.transform.position = cellCenter;
-        //cellIndicator.transform.localScale = new Vector3(
-        //    Grid.cellSize.x,
-        //    1,
-        //    Grid.cellSize.y
-        //);
+    public void setGrid()
+    {
+        var grid = gridVisualization.transform;
+        var totalSize = GridManager.width * 10;
+        var offset = totalSize / 2 ;
+        gridVisualization.transform.position = new Vector3(offset - 5, 0.01f, offset - 5);
+
     }
 }

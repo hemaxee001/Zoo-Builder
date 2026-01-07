@@ -7,8 +7,16 @@ public class CameraFollow : MonoBehaviour
     public float minZoom = 5f;
     public float maxZoom = 20f;
 
-    Vector3 lastPos;
+    [SerializeField]
+    public InputManager InputManager;
 
+    Vector3 lastPos;
+    private void Start()
+    {
+        //Cursor.lockState = CursorLockMode.Locked;
+        //Cursor.visible = false;
+
+    }
     void Update()
     {
         HandleDrag();
@@ -17,7 +25,11 @@ public class CameraFollow : MonoBehaviour
 
     void HandleDrag()
     {
-
+        if(InputManager.clickedObject != null)
+        {
+            print(" no cliked object");
+            return;
+        }
         if (Input.GetMouseButtonDown(0))
         {
             lastPos = Input.mousePosition;
@@ -25,7 +37,7 @@ public class CameraFollow : MonoBehaviour
         if (Input.GetMouseButton(0))
         {
             Vector3 delta = Input.mousePosition - lastPos;
-            Vector3 move = new Vector3(-delta.x * moveSpeed * Time.deltaTime, 0,-delta.y * moveSpeed * Time.deltaTime);
+            Vector3 move = new Vector3(-delta.x * moveSpeed * Time.deltaTime, 0, -delta.y * moveSpeed * Time.deltaTime);
             transform.Translate(move, Space.World);
             lastPos = Input.mousePosition;
         }
@@ -56,8 +68,10 @@ public class CameraFollow : MonoBehaviour
 
     void ClampZoom()
     {
-        float y = transform.position.y;
-        y = Mathf.Clamp(y, minZoom, maxZoom);
+        //float y = transform.position.y;
+        //y = Mathf.Clamp(y, minZoom, maxZoom);
+        //transform.position = new Vector3(transform.position.x, y, transform.position.z);
+        float y = Mathf.Clamp(transform.position.y, minZoom, maxZoom);
         transform.position = new Vector3(transform.position.x, y, transform.position.z);
     }
 }
